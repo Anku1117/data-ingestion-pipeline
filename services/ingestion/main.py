@@ -7,6 +7,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from libraries.configuration.settings import get_settings
+from libraries.database.session import dispose_engine, get_engine
 from libraries.logging.logging import setup_logging
 from services.ingestion.routes import events, health
 
@@ -19,7 +20,13 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     setup_logging()
     settings = get_settings()
     app.state.settings = settings
+
+    engine = get_engine()
+    app.state.engine = engine
+
     yield
+
+    await dispose_engine()
 
 
 def create_app() -> FastAPI:

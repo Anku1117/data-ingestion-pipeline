@@ -10,9 +10,8 @@ services:
     env_file:
       - .env
     depends_on:
-      - postgres
-      - kafka
-      - elasticsearch
+      postgres:
+        condition: service_healthy
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
       interval: 30s

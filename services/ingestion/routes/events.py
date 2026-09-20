@@ -1,35 +1,49 @@
 from __future__ import annotations
 
 import uuid
+from typing import TYPE_CHECKING
 
-from fastapi import APIRouter, HTTPException, Request, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 
-from libraries.configuration.settings import get_settings
+from libraries.database.repositories import DuplicateEventError, SQLAlchemyEventRepository
+from libraries.database.session import get_session
 from libraries.logging.logging import get_logger
 from libraries.schemas.common import EventEnvelope
-from services.ingestion.producer import get_producer
 from services.ingestion.schemas import (
     ErrorResponse,
     EventCreateRequest,
     EventCreateResponse,
 )
+from services.ingestion.service import EventService
+
+if TYPE_CHECKING:
+    from sqlalchemy.ext.asyncio import AsyncSession
 
 logger = get_logger(__name__)
 router = APIRouter(prefix="/events", tags=["events"])
 
 
+def _get_service(session: AsyncSession) -> EventService:
+    repo = SQLAlchemyEventRepository(session)
+    return EventService(repo)
+
+
 @router.post(
     "",
     response_model=EventCreateResponse,
-    status_code=status.HTTP_202_ACCEPTED,
+    status_code=status.HTTP_201_CREATED,
     responses={
+        409: {"model": ErrorResponse},
         422: {"model": ErrorResponse},
         500: {"model": ErrorResponse},
     },
 )
-async def create_event(request: Request, body: EventCreateRequest) -> EventCreateResponse:
+async def create_event(
+    request: Request,
+    body: EventCreateRequest,
+    session: AsyncSession = Depends(get_session),  # noqa: B008
+) -> EventCreateResponse:
     request_id = str(uuid.uuid4())
-    settings = get_settings()
 
     try:
         kwargs: dict[str, object] = {
@@ -46,11 +60,12 @@ async def create_event(request: Request, body: EventCreateRequest) -> EventCreat
             kwargs["timestamp"] = body.timestamp
         event = EventEnvelope(**kwargs)
 
-        producer = get_producer()
-        await producer.produce(settings.kafka_events_topic, event)
+        service = _get_service(session)
+        await service.create_event(event)
+        await session.commit()
 
         logger.info(
-            "Event accepted event_id=%s event_type=%s request_id=%s",
+            "Event persisted event_id=%s event_type=%s request_id=%s",
             event.event_id,
             event.event_type,
             request_id,
@@ -58,10 +73,24 @@ async def create_event(request: Request, body: EventCreateRequest) -> EventCreat
 
         return EventCreateResponse(
             event_id=event.event_id,
-            status="accepted",
+            status="created",
             timestamp=event.timestamp,
         )
+    except DuplicateEventError as e:
+        await session.rollback()
+        logger.warning("Duplicate event event_id=%s request_id=%s", e.event_id, request_id)
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=ErrorResponse(
+                error="duplicate_event",
+                detail=f"Event with id '{e.event_id}' already exists",
+                request_id=request_id,
+            ).model_dump(),
+        ) from None
+    except HTTPException:
+        raise
     except Exception as e:
+        await session.rollback()
         logger.error("Failed to create event request_id=%s error=%s", request_id, str(e))
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,

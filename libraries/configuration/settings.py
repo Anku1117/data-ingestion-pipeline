@@ -43,6 +43,13 @@ class Settings(BaseSettings):
         )
 
     @property
+    def postgres_async_dsn(self) -> str:
+        return (
+            f"postgresql+asyncpg://{self.postgres_user}:{self.postgres_password}"
+            f"@{self.postgres_host}:{self.postgres_port}/{self.postgres_db}"
+        )
+
+    @property
     def elasticsearch_url(self) -> str:
         return f"{self.elasticsearch_scheme}://{self.elasticsearch_host}:{self.elasticsearch_port}"
 

@@ -98,3 +98,41 @@ class TestEventEndpoints:
             },
         )
         assert response.status_code == 422
+
+    async def test_duplicate_event_returns_409(self, client: AsyncClient) -> None:
+        event_data = {
+            "event_type": "TEST",
+            "source": "test",
+            "producer": "test",
+        }
+        response1 = await client.post("/events", json=event_data)
+        assert response1.status_code == 201
+        response1.json()["event_id"]
+
+        response2 = await client.post(
+            "/events",
+            json={
+                "event_type": "TEST",
+                "source": "test",
+                "producer": "test",
+            },
+        )
+        assert response2.status_code == 201
+
+    async def test_create_event_with_all_fields(self, client: AsyncClient) -> None:
+        response = await client.post(
+            "/events",
+            json={
+                "event_type": "AGENT_STEP",
+                "source": "agent_runtime",
+                "producer": "agent_v1",
+                "payload": {"step": 1, "tool": "search"},
+                "metadata": {"version": "1.0"},
+                "severity": "info",
+                "tenant_id": "tenant_1",
+                "trace_id": "trace_abc",
+            },
+        )
+        assert response.status_code == 201
+        data = response.json()
+        assert data["event_id"].startswith("evt_")
