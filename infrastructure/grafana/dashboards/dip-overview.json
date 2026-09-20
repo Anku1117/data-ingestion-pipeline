@@ -1,0 +1,78 @@
+{
+  "dashboard": {
+    "title": "DIP Pipeline Overview",
+    "uid": "dip-overview",
+    "tags": ["dip", "pipeline"],
+    "timezone": "utc",
+    "panels": [
+      {
+        "title": "Events Received",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "dip_pipeline_events_received_total",
+            "legendFormat": "Received"
+          }
+        ],
+        "gridPos": {"h": 4, "w": 6, "x": 0, "y": 0}
+      },
+      {
+        "title": "Events Processed",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "dip_pipeline_events_processed_total",
+            "legendFormat": "Processed"
+          }
+        ],
+        "gridPos": {"h": 4, "w": 6, "x": 6, "y": 0}
+      },
+      {
+        "title": "Validation Failed",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "dip_pipeline_validation_failed_total",
+            "legendFormat": "Failed"
+          }
+        ],
+        "gridPos": {"h": 4, "w": 6, "x": 12, "y": 0}
+      },
+      {
+        "title": "Threats Detected",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "dip_detector_threats_detected_total",
+            "legendFormat": "Threats"
+          }
+        ],
+        "gridPos": {"h": 4, "w": 6, "x": 18, "y": 0}
+      },
+      {
+        "title": "Processing Latency",
+        "type": "timeseries",
+        "targets": [
+          {
+            "expr": "dip_pipeline_process_seconds_avg",
+            "legendFormat": "Avg Latency"
+          }
+        ],
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 4}
+      },
+      {
+        "title": "Event Types",
+        "type": "piechart",
+        "targets": [
+          {
+            "expr": "dip_events_persisted_total",
+            "legendFormat": "Persisted"
+          }
+        ],
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 4}
+      }
+    ],
+    "time": {"from": "now-1h", "to": "now"},
+    "refresh": "10s"
+  }
+}

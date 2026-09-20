@@ -9,6 +9,7 @@ from libraries.database.repositories import DuplicateEventError, SQLAlchemyEvent
 from libraries.database.session import get_session
 from libraries.logging.logging import get_logger
 from libraries.schemas.common import EventEnvelope
+from libraries.search import get_search
 from services.ingestion.schemas import (
     ErrorResponse,
     EventCreateRequest,
@@ -63,6 +64,12 @@ async def create_event(
         service = _get_service(session)
         await service.create_event(event)
         await session.commit()
+
+        try:
+            search = get_search()
+            await search.index_event(event)
+        except Exception:
+            logger.warning("Failed to index event in search backend event_id=%s", event.event_id)
 
         logger.info(
             "Event persisted event_id=%s event_type=%s request_id=%s",

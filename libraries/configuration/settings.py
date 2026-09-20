@@ -35,6 +35,10 @@ class Settings(BaseSettings):
     prometheus_port: int = 9090
     metrics_enabled: bool = True
 
+    event_backend: str = "memory"
+    search_backend: str = "memory"
+    cache_backend: str = "memory"
+
     @property
     def postgres_dsn(self) -> str:
         return (
