@@ -39,6 +39,8 @@ class Settings(BaseSettings):
     search_backend: str = "memory"
     cache_backend: str = "memory"
 
+    api_keys: str = ""
+
     @property
     def postgres_dsn(self) -> str:
         return (

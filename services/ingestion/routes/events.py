@@ -10,6 +10,8 @@ from libraries.database.session import get_session
 from libraries.logging.logging import get_logger
 from libraries.schemas.common import EventEnvelope
 from libraries.search import get_search
+from libraries.security.auth import verify_api_key
+from libraries.security.rate_limit import rate_limit
 from services.ingestion.schemas import (
     ErrorResponse,
     EventCreateRequest,
@@ -43,6 +45,8 @@ async def create_event(
     request: Request,
     body: EventCreateRequest,
     session: AsyncSession = Depends(get_session),  # noqa: B008
+    _api_key: str | None = Depends(verify_api_key),  # noqa: B008
+    _rate: None = Depends(rate_limit),  # noqa: B008
 ) -> EventCreateResponse:
     request_id = str(uuid.uuid4())
 
