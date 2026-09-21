@@ -47,7 +47,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     logger.info("DIP shutting down (drain timeout=%ds)", _SHUTDOWN_TIMEOUT)
     try:
         await asyncio.wait_for(stop_event_backend(), timeout=_SHUTDOWN_TIMEOUT)
-    except asyncio.TimeoutError:
+    except TimeoutError:
         logger.warning("Event backend shutdown timed out after %ds", _SHUTDOWN_TIMEOUT)
 
     await dispose_engine()

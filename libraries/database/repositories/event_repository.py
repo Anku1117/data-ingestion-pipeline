@@ -1,8 +1,9 @@
 from __future__ import annotations
 
+from datetime import UTC, datetime, timedelta
 from typing import TYPE_CHECKING
 
-from sqlalchemy import select
+from sqlalchemy import delete, select
 
 from libraries.database.models import EventRecord
 from libraries.database.repositories.base import EventRepository
@@ -77,3 +78,14 @@ class SQLAlchemyEventRepository(EventRepository):
             select(EventRecord.event_id).where(EventRecord.event_id == event_id).limit(1)
         )
         return result.scalar_one_or_none() is not None
+
+    async def delete_old_events(self, days: int) -> int:
+        cutoff = datetime.now(UTC) - timedelta(days=days)
+        result = await self._session.execute(
+            delete(EventRecord).where(EventRecord.timestamp < cutoff)
+        )
+        deleted = result.rowcount
+        await self._session.flush()
+        if deleted > 0:
+            logger.info("Purged %d events older than %d days", deleted, days)
+        return deleted

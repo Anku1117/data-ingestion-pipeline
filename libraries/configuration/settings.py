@@ -41,6 +41,7 @@ class Settings(BaseSettings):
 
     api_keys: str = ""
     cors_origins: str = "*"
+    retention_days: int = 90
 
     @property
     def postgres_dsn(self) -> str:

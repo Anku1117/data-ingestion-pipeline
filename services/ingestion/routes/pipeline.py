@@ -1,8 +1,11 @@
 from __future__ import annotations
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from libraries.configuration.settings import get_settings
+from libraries.database.repositories import SQLAlchemyAlertRepository, SQLAlchemyEventRepository
+from libraries.database.session import get_session
 from libraries.event_backend import get_event_backend
 from libraries.logging.logging import get_logger
 from libraries.observability.metrics import get_metrics
@@ -57,4 +60,35 @@ async def pipeline_stats() -> dict:
             "events_persisted": metrics.get_counter("events_persisted_total"),
             "db_errors": metrics.get_counter("database_operation_failure_total"),
         },
+    }
+
+
+@router.post("/retention/purge")
+async def purge_old_data(
+    days: int = 90,
+    session: AsyncSession = Depends(get_session),  # noqa: B008
+) -> dict:
+    settings = get_settings()
+    retention_days = days if days > 0 else settings.retention_days
+
+    event_repo = SQLAlchemyEventRepository(session)
+    alert_repo = SQLAlchemyAlertRepository(session)
+
+    events_deleted = await event_repo.delete_old_events(retention_days)
+    alerts_deleted = await alert_repo.delete_old(retention_days)
+
+    await session.commit()
+
+    logger.info(
+        "Data retention purge completed: events=%d alerts=%d retention_days=%d",
+        events_deleted,
+        alerts_deleted,
+        retention_days,
+    )
+
+    return {
+        "status": "completed",
+        "retention_days": retention_days,
+        "events_deleted": events_deleted,
+        "alerts_deleted": alerts_deleted,
     }
