@@ -23,16 +23,28 @@ def get_cache() -> Cache:
 
             _cache = RedisCache(redis_url=settings.redis_url)
             logger.info("Using RedisCache")
-        except ImportError:
+        except ImportError as e:
+            if settings.is_production:
+                raise RuntimeError(
+                    "Redis backend requested but redis package is not installed. "
+                    "Install it with: pip install redis"
+                ) from e
             logger.warning("redis package not installed, falling back to memory cache")
             from libraries.cache.memory_cache import MemoryCache
 
             _cache = MemoryCache()
-    else:
+    elif backend == "memory":
         from libraries.cache.memory_cache import MemoryCache
 
         _cache = MemoryCache()
-        logger.info("Using MemoryCache (development mode)")
+        if settings.is_production:
+            logger.warning(
+                "Using MemoryCache in production. " "This is not recommended for production use."
+            )
+        else:
+            logger.info("Using MemoryCache (development mode)")
+    else:
+        raise ValueError(f"Unknown cache backend: {backend}")
 
     return _cache
 

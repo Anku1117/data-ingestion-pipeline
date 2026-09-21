@@ -25,16 +25,29 @@ def get_event_backend() -> EventBackend:
                 bootstrap_servers=settings.kafka_bootstrap_servers,
             )
             logger.info("Using KafkaEventBackend")
-        except ImportError:
+        except ImportError as e:
+            if settings.is_production:
+                raise RuntimeError(
+                    "Kafka backend requested but aiokafka is not installed. "
+                    "Install it with: pip install aiokafka"
+                ) from e
             logger.warning("aiokafka not installed, falling back to memory backend")
             from libraries.event_backend.memory_backend import MemoryEventBackend
 
             _backend = MemoryEventBackend()
-    else:
+    elif backend_type == "memory":
         from libraries.event_backend.memory_backend import MemoryEventBackend
 
         _backend = MemoryEventBackend()
-        logger.info("Using MemoryEventBackend (development mode)")
+        if settings.is_production:
+            logger.warning(
+                "Using MemoryEventBackend in production. "
+                "This is not recommended for production use."
+            )
+        else:
+            logger.info("Using MemoryEventBackend (development mode)")
+    else:
+        raise ValueError(f"Unknown event backend: {backend_type}")
 
     return _backend
 

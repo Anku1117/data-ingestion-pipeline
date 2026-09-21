@@ -87,7 +87,7 @@ class TestE2EAgentFlow:
         )
         await agent_service.create_evaluation(evaluation)
 
-        evals = agent_service.get_evaluations(agent_id="agent_2")
+        evals = await agent_service.get_evaluations(agent_id="agent_2")
         assert evals["total"] == 1
         assert evals["evaluations"][0]["score"] == 0.85
 

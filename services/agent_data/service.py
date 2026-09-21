@@ -19,18 +19,41 @@ logger = get_logger(__name__)
 
 
 class AgentDataService:
-    """Service for agent telemetry, trajectories, and evaluation."""
+    """Service for agent telemetry, trajectories, and evaluation.
 
-    def __init__(self) -> None:
-        self._runs: dict[str, AgentRun] = {}
-        self._steps: dict[str, list[AgentStep]] = {}
-        self._tasks: dict[str, AgentTask] = {}
-        self._evaluations: dict[str, AgentEvaluation] = {}
-        logger.info("AgentDataService initialized")
+    Uses repositories for persistent storage. Falls back to in-memory
+    when no repositories are provided (for backward compatibility).
+    """
+
+    def __init__(
+        self,
+        run_repo: Any = None,
+        step_repo: Any = None,
+        evaluation_repo: Any = None,
+        task_repo: Any = None,
+    ) -> None:
+        self._run_repo = run_repo
+        self._step_repo = step_repo
+        self._evaluation_repo = evaluation_repo
+        self._task_repo = task_repo
+
+        self._use_persistence = run_repo is not None
+
+        if not self._use_persistence:
+            self._runs: dict[str, AgentRun] = {}
+            self._steps: dict[str, list[AgentStep]] = {}
+            self._tasks: dict[str, AgentTask] = {}
+            self._evaluations: dict[str, AgentEvaluation] = {}
+
+        logger.info("AgentDataService initialized persistence=%s", self._use_persistence)
 
     @timed("agent.create_task")
     async def create_task(self, task: AgentTask) -> AgentTask:
-        self._tasks[task.task_id] = task
+        if self._use_persistence:
+            await self._task_repo.create(task)
+        else:
+            self._tasks[task.task_id] = task
+
         await self._publish_agent_event(
             "AGENT_TASK_CREATED", task.task_id, task.model_dump(mode="json")
         )
@@ -39,8 +62,12 @@ class AgentDataService:
 
     @timed("agent.start_run")
     async def start_run(self, run: AgentRun) -> AgentRun:
-        self._runs[run.run_id] = run
-        self._steps[run.run_id] = []
+        if self._use_persistence:
+            await self._run_repo.create(run)
+        else:
+            self._runs[run.run_id] = run
+            self._steps[run.run_id] = []
+
         await self._publish_agent_event(
             "AGENT_RUN_STARTED", run.run_id, run.model_dump(mode="json")
         )
@@ -49,42 +76,60 @@ class AgentDataService:
 
     @timed("agent.complete_run")
     async def complete_run(self, run_id: str, outcome: str | None = None) -> AgentRun | None:
-        run = self._runs.get(run_id)
+        if self._use_persistence:
+            run = await self._run_repo.get_by_id(run_id)
+        else:
+            run = self._runs.get(run_id)
+
         if run is None:
             return None
+
         from datetime import UTC, datetime
 
         run.status = RunStatus.COMPLETED
         run.ended_at = datetime.now(UTC)
         run.outcome = outcome
-        run.total_steps = len(self._steps.get(run_id, []))
+
+        if self._use_persistence:
+            run.total_steps = await self._step_repo.count_by_run(run_id)
+            await self._run_repo.update(run)
+        else:
+            run.total_steps = len(self._steps.get(run_id, []))
+
         await self._publish_agent_event("AGENT_RUN_COMPLETED", run_id, run.model_dump(mode="json"))
         logger.info("Run completed run_id=%s outcome=%s", run_id, outcome)
         return run
 
     @timed("agent.fail_run")
     async def fail_run(self, run_id: str, error: str | None = None) -> AgentRun | None:
-        run = self._runs.get(run_id)
+        if self._use_persistence:
+            run = await self._run_repo.get_by_id(run_id)
+        else:
+            run = self._runs.get(run_id)
+
         if run is None:
             return None
+
         from datetime import UTC, datetime
 
         run.status = RunStatus.FAILED
         run.ended_at = datetime.now(UTC)
         run.outcome = error
+
+        if self._use_persistence:
+            await self._run_repo.update(run)
         await self._publish_agent_event("AGENT_RUN_FAILED", run_id, run.model_dump(mode="json"))
         logger.info("Run failed run_id=%s error=%s", run_id, error)
         return run
 
     @timed("agent.record_step")
     async def record_step(self, step: AgentStep) -> AgentStep:
-        if step.run_id not in self._steps:
-            self._steps[step.run_id] = []
-        self._steps[step.run_id].append(step)
-
-        run = self._runs.get(step.run_id)
-        if run:
-            run.total_tokens += step.input_tokens + step.output_tokens
+        if self._use_persistence:
+            await self._step_repo.create(step)
+        else:
+            if step.run_id not in self._steps:
+                self._steps[step.run_id] = []
+            self._steps[step.run_id].append(step)
 
         await self._publish_agent_event(
             f"AGENT_{step.step_type.value.upper()}",
@@ -96,11 +141,19 @@ class AgentDataService:
 
     @timed("agent.get_trajectory")
     async def get_trajectory(self, run_id: str) -> AgentTrajectory | None:
-        run = self._runs.get(run_id)
+        if self._use_persistence:
+            run = await self._run_repo.get_by_id(run_id)
+        else:
+            run = self._runs.get(run_id)
+
         if run is None:
             return None
 
-        steps = self._steps.get(run_id, [])
+        if self._use_persistence:
+            steps = await self._step_repo.list_by_run(run_id)
+        else:
+            steps = self._steps.get(run_id, [])
+
         total_latency = sum(s.latency_ms for s in steps)
         total_tokens = sum(s.input_tokens + s.output_tokens for s in steps)
 
@@ -115,7 +168,11 @@ class AgentDataService:
         )
 
     async def create_evaluation(self, evaluation: AgentEvaluation) -> AgentEvaluation:
-        self._evaluations[evaluation.run_id] = evaluation
+        if self._use_persistence:
+            await self._evaluation_repo.create(evaluation)
+        else:
+            self._evaluations[evaluation.run_id] = evaluation
+
         await self._publish_agent_event(
             "AGENT_EVALUATION", evaluation.run_id, evaluation.model_dump(mode="json")
         )
@@ -127,13 +184,16 @@ class AgentDataService:
         )
         return evaluation
 
-    def get_runs(
+    async def get_runs(
         self,
         agent_id: str | None = None,
         status: str | None = None,
         limit: int = 50,
         offset: int = 0,
     ) -> dict[str, Any]:
+        if self._use_persistence:
+            return await self._run_repo.list_runs(agent_id, status, limit, offset)
+
         runs = list(self._runs.values())
         if agent_id:
             runs = [r for r in runs if r.agent_id == agent_id]
@@ -149,15 +209,20 @@ class AgentDataService:
             "offset": offset,
         }
 
-    def get_run(self, run_id: str) -> AgentRun | None:
+    async def get_run(self, run_id: str) -> AgentRun | None:
+        if self._use_persistence:
+            return await self._run_repo.get_by_id(run_id)
         return self._runs.get(run_id)
 
-    def get_evaluations(
+    async def get_evaluations(
         self,
         agent_id: str | None = None,
         limit: int = 50,
         offset: int = 0,
     ) -> dict[str, Any]:
+        if self._use_persistence:
+            return await self._evaluation_repo.list_evaluations(agent_id, limit, offset)
+
         evals = list(self._evaluations.values())
         if agent_id:
             evals = [e for e in evals if e.agent_id == agent_id]
@@ -171,7 +236,9 @@ class AgentDataService:
             "offset": offset,
         }
 
-    def get_evaluation_by_run_id(self, run_id: str) -> AgentEvaluation | None:
+    async def get_evaluation_by_run_id(self, run_id: str) -> AgentEvaluation | None:
+        if self._use_persistence:
+            return await self._evaluation_repo.get_by_run_id(run_id)
         return self._evaluations.get(run_id)
 
     async def export_training_dataset(
@@ -180,18 +247,30 @@ class AgentDataService:
         min_score: float | None = None,
     ) -> list[dict[str, Any]]:
         entries = []
-        target_runs = (
-            list(self._runs.values())
-            if run_ids is None
-            else [self._runs[rid] for rid in run_ids if rid in self._runs]
-        )
+
+        if self._use_persistence:
+            if run_ids:
+                target_runs = []
+                for rid in run_ids:
+                    run = await self._run_repo.get_by_id(rid)
+                    if run:
+                        target_runs.append(run)
+            else:
+                result = await self._run_repo.list_runs(limit=10000)
+                target_runs = [AgentRun(**r) for r in result.get("runs", [])]
+        else:
+            target_runs = (
+                list(self._runs.values())
+                if run_ids is None
+                else [self._runs[rid] for rid in run_ids if rid in self._runs]
+            )
 
         for run in target_runs:
             trajectory = await self.get_trajectory(run.run_id)
             if trajectory is None:
                 continue
 
-            evaluation = self._evaluations.get(run.run_id)
+            evaluation = await self._get_evaluation_for_export(run.run_id)
             if evaluation and min_score is not None and evaluation.score < min_score:
                 continue
 
@@ -211,6 +290,11 @@ class AgentDataService:
             entries.append(entry)
 
         return entries
+
+    async def _get_evaluation_for_export(self, run_id: str) -> AgentEvaluation | None:
+        if self._use_persistence:
+            return await self._evaluation_repo.get_by_run_id(run_id)
+        return self._evaluations.get(run_id)
 
     async def _publish_agent_event(
         self, event_type: str, run_id: str, data: dict[str, Any]

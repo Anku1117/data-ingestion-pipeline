@@ -23,16 +23,29 @@ def get_search() -> SearchBackend:
 
             _search = ElasticsearchSearchBackend(es_url=settings.elasticsearch_url)
             logger.info("Using ElasticsearchSearchBackend")
-        except ImportError:
+        except ImportError as e:
+            if settings.is_production:
+                raise RuntimeError(
+                    "Elasticsearch backend requested but elasticsearch package is not installed. "
+                    "Install it with: pip install elasticsearch"
+                ) from e
             logger.warning("elasticsearch package not installed, falling back to memory")
             from libraries.search.memory_search import MemorySearchBackend
 
             _search = MemorySearchBackend()
-    else:
+    elif backend == "memory":
         from libraries.search.memory_search import MemorySearchBackend
 
         _search = MemorySearchBackend()
-        logger.info("Using MemorySearchBackend (development mode)")
+        if settings.is_production:
+            logger.warning(
+                "Using MemorySearchBackend in production. "
+                "This is not recommended for production use."
+            )
+        else:
+            logger.info("Using MemorySearchBackend (development mode)")
+    else:
+        raise ValueError(f"Unknown search backend: {backend}")
 
     return _search
 
