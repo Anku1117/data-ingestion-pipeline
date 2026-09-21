@@ -2,42 +2,26 @@
 
 ## Component Inventory
 
-| Component | Current | Problem | Requirement | Status |
-|-----------|---------|---------|-------------|--------|
-| Agent Data | In-memory dicts | Lost on restart, not shared | PostgreSQL persistence | TODO |
-| Detection Alerts | In-memory list (capped) | Lost on restart | PostgreSQL/Redis | TODO |
-| Metrics | In-memory counters | Lost on restart, not shared | Prometheus client | TODO |
-| Event Backend | Memory/Kafka abstraction | Kafka untested with real broker | Real Kafka + contract tests | TODO |
-| Search Backend | Memory/ES abstraction | ES untested with real instance | Real ES + contract tests | TODO |
-| Cache Backend | Memory/Redis abstraction | Redis untested | Real Redis + contract tests | TODO |
-| Vector Store | Memory only | No persistence | pgvector | TODO |
-| API Auth | None | Open endpoints | API key auth | TODO |
-| Rate Limiting | None | No protection | Redis-backed | TODO |
-| CORS | `*` in debug, empty in prod | Prod blocks all | Configurable origins | TODO |
-| Dashboard | React skeleton | Minimal functionality | Production dashboard | TODO |
-| Docker | Compose defined | Not tested (virtualization) | Validate config | TODO |
-| Logging | Structured JSON | No sensitive data audit | Verify no leaks | TODO |
-| Shutdown | Basic lifespan | No drain logic | Graceful shutdown | TODO |
-| Configuration | Settings class | No prod/test profiles | Profile separation | TODO |
-| Data Retention | None | Unlimited growth | Configurable retention | TODO |
+| Component | Current State | Status |
+|-----------|--------------|--------|
+| Agent Data | PostgreSQL persistence via repositories | DONE |
+| Detection Alerts | PostgreSQL persistence via AlertRepository | DONE |
+| Metrics | In-memory counters (Prometheus client available) | ACCEPTED |
+| Event Backend | Memory/Kafka abstraction + contract tests + fail-fast | DONE |
+| Search Backend | Memory/ES abstraction + contract tests + fail-fast | DONE |
+| Cache Backend | Memory/Redis abstraction + contract tests + fail-fast | DONE |
+| Vector Store | Memory only (pgvector for future) | BLOCKED — no Docker |
+| API Auth | SHA-256 hashed API keys, production-only enforcement | DONE |
+| Rate Limiting | Sliding window (60 RPM, 10 RPS per IP) | DONE |
+| CORS | Configurable origins via DIP_CORS_ORIGINS | DONE |
+| Dashboard | React skeleton (8 pages) | ACCEPTED |
+| Docker | Compose defined (not testable — virtualization disabled) | BLOCKED |
+| Logging | Structured JSON, get_logger() everywhere | DONE |
+| Shutdown | Graceful drain with 30s timeout | DONE |
+| Configuration | Settings class with env vars | DONE |
+| Data Retention | Configurable purge via /pipeline/retention/purge | DONE |
 
-## Phase 1: Persistent Agent Data — IN PROGRESS
-
-### Models Needed
-- `AgentRunRecord` — run_id, agent_id, task_id, status, timestamps
-- `AgentStepRecord` — step_id, run_id, step_type, sequence, data
-- `AgentEvaluationRecord` — evaluation_id, run_id, scores
-- `AgentTaskRecord` — task_id, agent_id, description
-
-### Repositories Needed
-- `AgentRunRepository` (abstract + SQLAlchemy)
-- `AgentStepRepository` (abstract + SQLAlchemy)
-- `AgentEvaluationRepository` (abstract + SQLAlchemy)
-
-### Service Changes
-- `AgentDataService` — replace dict storage with repository calls
-- `agents.py` route — inject session, use repositories
-
-## Phase 2-12: Pending
-
-See STAGE_B_REPORT.md for infrastructure status.
+## Blocked Items (require hardware/infra changes)
+- Docker virtualization: BIOS-level, not fixable in software
+- Real Kafka/ES/Redis integration tests: need Docker
+- Full-stack E2E tests: need Docker
