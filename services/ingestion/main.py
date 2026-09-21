@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 from contextlib import asynccontextmanager
 from typing import TYPE_CHECKING
 
@@ -9,7 +10,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from libraries.configuration.settings import get_settings
 from libraries.database.session import dispose_engine, get_engine
 from libraries.event_backend import start_event_backend, stop_event_backend
-from libraries.logging.logging import setup_logging
+from libraries.logging.logging import get_logger, setup_logging
 from services.ingestion.routes import (
     agents,
     events,
@@ -24,6 +25,10 @@ from services.ingestion.routes import (
 if TYPE_CHECKING:
     from collections.abc import AsyncGenerator
 
+logger = get_logger(__name__)
+
+_SHUTDOWN_TIMEOUT = 30
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
@@ -35,11 +40,18 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     app.state.engine = engine
 
     await start_event_backend()
+    logger.info("DIP started (env=%s)", settings.env)
 
     yield
 
-    await stop_event_backend()
+    logger.info("DIP shutting down (drain timeout=%ds)", _SHUTDOWN_TIMEOUT)
+    try:
+        await asyncio.wait_for(stop_event_backend(), timeout=_SHUTDOWN_TIMEOUT)
+    except asyncio.TimeoutError:
+        logger.warning("Event backend shutdown timed out after %ds", _SHUTDOWN_TIMEOUT)
+
     await dispose_engine()
+    logger.info("DIP shutdown complete")
 
 
 def create_app() -> FastAPI:
@@ -55,7 +67,7 @@ def create_app() -> FastAPI:
 
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=["*"] if settings.debug else [],
+        allow_origins=[o.strip() for o in settings.cors_origins.split(",") if o.strip()],
         allow_credentials=True,
         allow_methods=["*"],
         allow_headers=["*"],

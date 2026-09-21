@@ -12,6 +12,8 @@ from libraries.database.repositories.agent_repository import (
     SQLAlchemyAgentStepRepository,
     SQLAlchemyAgentTaskRepository,
 )
+from libraries.database.repositories.alert_base import AlertRepository
+from libraries.database.repositories.alert_repository import SQLAlchemyAlertRepository
 from libraries.database.repositories.base import EventRepository
 from libraries.database.repositories.event_repository import (
     DuplicateEventError,
@@ -23,11 +25,13 @@ __all__ = [
     "AgentRunRepository",
     "AgentStepRepository",
     "AgentTaskRepository",
+    "AlertRepository",
     "DuplicateEventError",
     "EventRepository",
     "SQLAlchemyAgentEvaluationRepository",
     "SQLAlchemyAgentRunRepository",
     "SQLAlchemyAgentStepRepository",
     "SQLAlchemyAgentTaskRepository",
+    "SQLAlchemyAlertRepository",
     "SQLAlchemyEventRepository",
 ]

@@ -40,6 +40,7 @@ class Settings(BaseSettings):
     cache_backend: str = "memory"
 
     api_keys: str = ""
+    cors_origins: str = "*"
 
     @property
     def postgres_dsn(self) -> str:

@@ -6,6 +6,8 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_asyn
 
 from libraries.database.models import Base
 from libraries.database.session import get_session
+from libraries.security.auth import verify_api_key
+from libraries.security.rate_limit import rate_limit
 from services.ingestion.main import create_app
 
 
@@ -30,8 +32,16 @@ async def client(async_engine):
         async with factory() as session:
             yield session
 
+    async def _noop_rate_limit() -> None:
+        pass
+
+    async def _noop_api_key() -> str | None:
+        return None
+
     app = create_app()
     app.dependency_overrides[get_session] = override_get_session
+    app.dependency_overrides[rate_limit] = _noop_rate_limit
+    app.dependency_overrides[verify_api_key] = _noop_api_key
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as ac:
         yield ac

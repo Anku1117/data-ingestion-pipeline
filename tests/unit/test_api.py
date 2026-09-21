@@ -20,6 +20,9 @@ async def async_engine():
 
 @pytest.fixture
 async def client(async_engine):
+    from libraries.security.auth import verify_api_key
+    from libraries.security.rate_limit import rate_limit
+
     factory = async_sessionmaker(
         bind=async_engine,
         class_=AsyncSession,
@@ -30,8 +33,16 @@ async def client(async_engine):
         async with factory() as session:
             yield session
 
+    async def _noop_rate_limit() -> None:
+        pass
+
+    async def _noop_api_key() -> str | None:
+        return None
+
     app = create_app()
     app.dependency_overrides[get_session] = override_get_session
+    app.dependency_overrides[rate_limit] = _noop_rate_limit
+    app.dependency_overrides[verify_api_key] = _noop_api_key
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as ac:
         yield ac

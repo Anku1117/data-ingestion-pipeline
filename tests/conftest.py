@@ -4,6 +4,39 @@ import pytest
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
 from libraries.database.models import Base
+from libraries.database.session import get_session
+from libraries.security.auth import verify_api_key
+from libraries.security.rate_limit import rate_limit
+
+
+@pytest.fixture(autouse=True)
+def _reset_global_state():
+    import libraries.cache.factory as cache_factory
+    import libraries.security.rate_limit as rl
+
+    rl._default_limiter = None
+    cache_factory._cache = None
+    yield
+    rl._default_limiter = None
+    cache_factory._cache = None
+
+
+async def _noop_rate_limit() -> None:
+    pass
+
+
+async def _noop_api_key() -> str | None:
+    return None
+
+
+@pytest.fixture
+def app_with_overrides():
+    from services.ingestion.main import create_app
+
+    app = create_app()
+    app.dependency_overrides[rate_limit] = _noop_rate_limit
+    app.dependency_overrides[verify_api_key] = _noop_api_key
+    return app
 
 
 @pytest.fixture

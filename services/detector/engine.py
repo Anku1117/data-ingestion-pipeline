@@ -21,7 +21,7 @@ class DetectionEngine:
 
     MAX_ALERTS = 10000
 
-    def __init__(self) -> None:
+    def __init__(self, alert_repository: Any | None = None) -> None:
         self._rules: list[DetectionRule] = [
             BruteForceRule(threshold=5, window_seconds=300),
             PortScanRule(threshold=10),
@@ -29,6 +29,7 @@ class DetectionEngine:
             AuthenticationAnomalyRule(failure_ratio_threshold=0.5),
         ]
         self._alerts: list[ThreatAlert] = []
+        self._alert_repo = alert_repository
         logger.info("DetectionEngine initialized with %d rules", len(self._rules))
 
     def add_rule(self, rule: DetectionRule) -> None:
@@ -47,6 +48,14 @@ class DetectionEngine:
                     self._alerts.extend(result.alerts)
                     if len(self._alerts) > self.MAX_ALERTS:
                         self._alerts = self._alerts[-self.MAX_ALERTS :]
+                    if self._alert_repo is not None:
+                        import asyncio
+
+                        try:
+                            loop = asyncio.get_running_loop()
+                            loop.create_task(self._alert_repo.save_batch(result.alerts))
+                        except RuntimeError:
+                            pass
                     for alert in result.alerts:
                         logger.warning(
                             "Threat detected alert_id=%s type=%s severity=%s confidence=%.2f",
