@@ -41,25 +41,30 @@ async def get_event(
 ) -> dict:
     search = get_search()
     event = await search.get_event(event_id)
-    if event is None:
-        repo = SQLAlchemyEventRepository(session)
-        record = await repo.get_event_by_id(event_id)
-        if record is None:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail={"error": "not_found", "detail": f"Event {event_id} not found"},
-            )
-        return {
-            "event_id": record.event_id,
-            "event_type": record.event_type,
-            "source": record.source,
-            "producer": record.producer,
-            "severity": record.severity,
-            "timestamp": record.timestamp.isoformat() if record.timestamp else None,
-            "payload": record.payload,
-            "metadata": record.metadata_,
-            "trace_id": record.trace_id,
-            "agent_id": record.agent_id,
-            "run_id": record.run_id,
-        }
-    return event
+    if event is not None:
+        return event
+
+    repo = SQLAlchemyEventRepository(session)
+    record = await repo.get_event_by_id(event_id)
+    if record is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail={"error": "not_found", "detail": f"Event {event_id} not found"},
+        )
+    return {
+        "event_id": record.event_id,
+        "event_version": record.event_version,
+        "event_type": record.event_type,
+        "source": record.source,
+        "producer": record.producer,
+        "severity": record.severity,
+        "timestamp": record.timestamp.isoformat() if record.timestamp else None,
+        "payload": record.payload,
+        "metadata": record.metadata_,
+        "trace_id": record.trace_id,
+        "agent_id": record.agent_id,
+        "run_id": record.run_id,
+        "tenant_id": record.tenant_id,
+        "session_id": record.session_id,
+        "schema_version": record.schema_version,
+    }

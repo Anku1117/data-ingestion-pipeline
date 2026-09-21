@@ -1,10 +1,11 @@
 from __future__ import annotations
 
-from fastapi import APIRouter, Query
+from fastapi import APIRouter, HTTPException, Query, status
 
+from libraries.logging.logging import get_logger
 from services.agent_data.service import AgentDataService
 
-logger_text = __import__("logging").getLogger(__name__)
+logger = get_logger(__name__)
 router = APIRouter(prefix="/agents", tags=["agents"])
 
 _agent_service: AgentDataService | None = None
@@ -29,12 +30,10 @@ async def list_runs(
 
 
 @router.get("/runs/{run_id}")
-async def get_run(run_id: str) -> dict | None:
+async def get_run(run_id: str) -> dict:
     service = _get_service()
     run = service.get_run(run_id)
     if run is None:
-        from fastapi import HTTPException, status
-
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail={"error": "not_found", "detail": f"Run {run_id} not found"},
@@ -43,12 +42,10 @@ async def get_run(run_id: str) -> dict | None:
 
 
 @router.get("/runs/{run_id}/trajectory")
-async def get_trajectory(run_id: str) -> dict | None:
+async def get_trajectory(run_id: str) -> dict:
     service = _get_service()
     trajectory = await service.get_trajectory(run_id)
     if trajectory is None:
-        from fastapi import HTTPException, status
-
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail={"error": "not_found", "detail": f"Trajectory for run {run_id} not found"},
@@ -69,13 +66,10 @@ async def list_evaluations(
 @router.get("/evaluations/{run_id}")
 async def get_evaluation(run_id: str) -> dict:
     service = _get_service()
-    result = service.get_evaluations(limit=9999)
-    for ev in result.get("evaluations", []):
-        if ev.get("run_id") == run_id:
-            return ev
-    from fastapi import HTTPException, status
-
-    raise HTTPException(
-        status_code=status.HTTP_404_NOT_FOUND,
-        detail={"error": "not_found", "detail": f"Evaluation for run {run_id} not found"},
-    )
+    evaluation = service.get_evaluation_by_run_id(run_id)
+    if evaluation is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail={"error": "not_found", "detail": f"Evaluation for run {run_id} not found"},
+        )
+    return evaluation.model_dump(mode="json")

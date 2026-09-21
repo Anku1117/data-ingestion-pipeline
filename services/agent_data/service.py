@@ -171,15 +171,20 @@ class AgentDataService:
             "offset": offset,
         }
 
+    def get_evaluation_by_run_id(self, run_id: str) -> AgentEvaluation | None:
+        return self._evaluations.get(run_id)
+
     async def export_training_dataset(
         self,
         run_ids: list[str] | None = None,
         min_score: float | None = None,
     ) -> list[dict[str, Any]]:
         entries = []
-        target_runs = list(self._runs.values()) if run_ids is None else [
-            self._runs[rid] for rid in run_ids if rid in self._runs
-        ]
+        target_runs = (
+            list(self._runs.values())
+            if run_ids is None
+            else [self._runs[rid] for rid in run_ids if rid in self._runs]
+        )
 
         for run in target_runs:
             trajectory = await self.get_trajectory(run.run_id)

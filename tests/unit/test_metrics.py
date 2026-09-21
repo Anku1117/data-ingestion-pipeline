@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import asyncio
+
 from libraries.observability.metrics import MetricsCollector, get_metrics, timed
 
 
@@ -36,16 +38,47 @@ class TestMetricsCollector:
 
 
 class TestTimedDecorator:
-    def test_records_execution_time(self) -> None:
+    def test_records_execution_time_sync(self) -> None:
         collector = get_metrics()
         collector.reset()
 
-        @timed("test_func")
+        @timed("test_func_sync")
         def sample_func() -> str:
             return "done"
 
         result = sample_func()
         assert result == "done"
-        stats = collector.get_timer_stats("test_func")
+        stats = collector.get_timer_stats("test_func_sync")
         assert stats["count"] == 1
         assert stats["avg_ms"] >= 0
+
+    def test_records_execution_time_async(self) -> None:
+        collector = get_metrics()
+        collector.reset()
+
+        @timed("test_func_async")
+        async def sample_func() -> str:
+            return "async_done"
+
+        result = asyncio.get_event_loop().run_until_complete(sample_func())
+        assert result == "async_done"
+        stats = collector.get_timer_stats("test_func_async")
+        assert stats["count"] == 1
+        assert stats["avg_ms"] >= 0
+
+    def test_async_timed_decorator_preserves_exception(self) -> None:
+        collector = get_metrics()
+        collector.reset()
+
+        @timed("test_func_exc")
+        async def failing_func() -> None:
+            raise ValueError("test error")
+
+        try:
+            asyncio.get_event_loop().run_until_complete(failing_func())
+            raise AssertionError("Should have raised ValueError")
+        except ValueError as e:
+            assert str(e) == "test error"
+
+        stats = collector.get_timer_stats("test_func_exc")
+        assert stats["count"] == 1

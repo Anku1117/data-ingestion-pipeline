@@ -24,21 +24,15 @@ class Retriever:
     async def ingest(self, document: Document) -> int:
         chunks = self._chunker.chunk(document)
 
-        embeddings = await self._embedding_provider.embed_batch(
-            [c.content for c in chunks]
-        )
+        embeddings = await self._embedding_provider.embed_batch([c.content for c in chunks])
         for chunk, embedding in zip(chunks, embeddings, strict=False):
             chunk.embedding = embedding
 
         count = await self._vector_store.add_chunks(chunks)
-        logger.info(
-            "Document ingested doc_id=%s chunks=%d", document.document_id, count
-        )
+        logger.info("Document ingested doc_id=%s chunks=%d", document.document_id, count)
         return count
 
-    async def retrieve(
-        self, query: str, top_k: int = 10
-    ) -> list[SearchResult]:
+    async def retrieve(self, query: str, top_k: int = 10) -> list[SearchResult]:
         query_embedding = await self._embedding_provider.embed(query)
         results = await self._vector_store.search(query_embedding, top_k=top_k)
         logger.debug("Retrieved %d results for query", len(results))

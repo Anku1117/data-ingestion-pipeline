@@ -2,9 +2,10 @@ from __future__ import annotations
 
 from fastapi import APIRouter, Response
 
+from libraries.logging.logging import get_logger
 from libraries.observability.prometheus import generate_prometheus_metrics
 
-logger_text = __import__("logging").getLogger(__name__)
+logger = get_logger(__name__)
 router = APIRouter(tags=["prometheus"])
 
 

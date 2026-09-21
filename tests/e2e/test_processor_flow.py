@@ -53,14 +53,20 @@ class TestProcessorEnrichment:
 
     def test_agent_context_detected(self, enricher: EventEnricher) -> None:
         event = EventEnvelope(
-            event_type="AGENT_STEP", source="agent_runtime", producer="p", agent_id="a1",
+            event_type="AGENT_STEP",
+            source="agent_runtime",
+            producer="p",
+            agent_id="a1",
         )
         enriched = enricher.enrich(event)
         assert enriched.metadata["has_agent_context"] is True
 
     def test_user_context_detected(self, enricher: EventEnricher) -> None:
         event = EventEnvelope(
-            event_type="TEST", source="s", producer="p", payload={"user_id": "u1"},
+            event_type="TEST",
+            source="s",
+            producer="p",
+            payload={"user_id": "u1"},
         )
         enriched = enricher.enrich(event)
         assert enriched.metadata["has_user_context"] is True
@@ -92,7 +98,9 @@ class TestProcessorPipeline:
     @pytest.mark.asyncio
     async def test_pipeline_process_valid(self, pipeline: ProcessingPipeline) -> None:
         event = EventEnvelope(
-            event_type="LOGIN_FAILED", source="auth_service", producer="auth_v1",
+            event_type="LOGIN_FAILED",
+            source="auth_service",
+            producer="auth_v1",
             payload={"user_id": "u1"},
         )
         result = await pipeline.process(event)
@@ -107,10 +115,7 @@ class TestProcessorPipeline:
 
     @pytest.mark.asyncio
     async def test_pipeline_batch(self, pipeline: ProcessingPipeline) -> None:
-        events = [
-            EventEnvelope(event_type="TEST", source="s", producer="p")
-            for _ in range(5)
-        ]
+        events = [EventEnvelope(event_type="TEST", source="s", producer="p") for _ in range(5)]
         results = await pipeline.process_batch(events)
         assert len(results) == 5
         assert all(r.is_valid for r in results)

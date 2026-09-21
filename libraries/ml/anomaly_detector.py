@@ -90,9 +90,7 @@ class AnomalyDetector:
 
         return total_z / max(feature_count, 1)
 
-    def _generate_explanation(
-        self, features: FeatureVector, score: float, is_anomaly: bool
-    ) -> str:
+    def _generate_explanation(self, features: FeatureVector, score: float, is_anomaly: bool) -> str:
         if not is_anomaly:
             return "Normal behavior"
 
@@ -107,9 +105,7 @@ class AnomalyDetector:
                     and mean > 0
                     and current > mean * 1.5
                 ):
-                    anomalies.append(
-                        f"{field_name}: {current:.1f} (baseline: {mean:.1f})"
-                    )
+                    anomalies.append(f"{field_name}: {current:.1f} (baseline: {mean:.1f})")
 
         if anomalies:
             return "Anomalous: " + "; ".join(anomalies[:5])

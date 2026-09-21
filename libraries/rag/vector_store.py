@@ -13,30 +13,22 @@ class VectorStore(ABC):
     """Abstract vector store for document embeddings."""
 
     @abstractmethod
-    async def start(self) -> None:
-        ...
+    async def start(self) -> None: ...
 
     @abstractmethod
-    async def stop(self) -> None:
-        ...
+    async def stop(self) -> None: ...
 
     @abstractmethod
-    async def add_chunks(self, chunks: list[DocumentChunk]) -> int:
-        ...
+    async def add_chunks(self, chunks: list[DocumentChunk]) -> int: ...
 
     @abstractmethod
-    async def search(
-        self, query_embedding: list[float], top_k: int = 10
-    ) -> list[SearchResult]:
-        ...
+    async def search(self, query_embedding: list[float], top_k: int = 10) -> list[SearchResult]: ...
 
     @abstractmethod
-    async def delete_document(self, document_id: str) -> bool:
-        ...
+    async def delete_document(self, document_id: str) -> bool: ...
 
     @abstractmethod
-    async def health_check(self) -> bool:
-        ...
+    async def health_check(self) -> bool: ...
 
 
 class MemoryVectorStore(VectorStore):
@@ -60,9 +52,7 @@ class MemoryVectorStore(VectorStore):
             self._chunks[chunk.chunk_id] = chunk
         return len(chunks)
 
-    async def search(
-        self, query_embedding: list[float], top_k: int = 10
-    ) -> list[SearchResult]:
+    async def search(self, query_embedding: list[float], top_k: int = 10) -> list[SearchResult]:
         results: list[SearchResult] = []
         for chunk in self._chunks.values():
             if chunk.embedding is not None:
@@ -80,11 +70,7 @@ class MemoryVectorStore(VectorStore):
         return results[:top_k]
 
     async def delete_document(self, document_id: str) -> bool:
-        to_delete = [
-            cid
-            for cid, c in self._chunks.items()
-            if c.document_id == document_id
-        ]
+        to_delete = [cid for cid, c in self._chunks.items() if c.document_id == document_id]
         for cid in to_delete:
             del self._chunks[cid]
         return len(to_delete) > 0
@@ -112,12 +98,10 @@ class EmbeddingProvider(ABC):
     """Abstract embedding provider."""
 
     @abstractmethod
-    async def embed(self, text: str) -> list[float]:
-        ...
+    async def embed(self, text: str) -> list[float]: ...
 
     @abstractmethod
-    async def embed_batch(self, texts: list[str]) -> list[list[float]]:
-        ...
+    async def embed_batch(self, texts: list[str]) -> list[list[float]]: ...
 
 
 class DummyEmbeddingProvider(EmbeddingProvider):

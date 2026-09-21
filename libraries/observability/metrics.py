@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import time
 from collections.abc import Callable
 from functools import wraps
@@ -56,17 +57,30 @@ def get_metrics() -> MetricsCollector:
 
 def timed(metric_name: str) -> Callable[[F], F]:
     def decorator(func: F) -> F:
+        if asyncio.iscoroutinefunction(func):
+
+            @wraps(func)
+            async def async_wrapper(*args: Any, **kwargs: Any) -> Any:
+                start = time.perf_counter()
+                try:
+                    return await func(*args, **kwargs)
+                finally:
+                    duration_ms = (time.perf_counter() - start) * 1000
+                    get_metrics().record_time(metric_name, duration_ms)
+                    logger.debug("metric.%s %.2fms", metric_name, duration_ms)
+
+            return async_wrapper  # type: ignore[return-value]
+
         @wraps(func)
-        def wrapper(*args: Any, **kwargs: Any) -> Any:
+        def sync_wrapper(*args: Any, **kwargs: Any) -> Any:
             start = time.perf_counter()
             try:
-                result = func(*args, **kwargs)
-                return result
+                return func(*args, **kwargs)
             finally:
                 duration_ms = (time.perf_counter() - start) * 1000
                 get_metrics().record_time(metric_name, duration_ms)
                 logger.debug("metric.%s %.2fms", metric_name, duration_ms)
 
-        return wrapper  # type: ignore[return-value]
+        return sync_wrapper  # type: ignore[return-value]
 
     return decorator

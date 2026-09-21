@@ -13,9 +13,27 @@ class MemoryCache(Cache):
 
     def __init__(self) -> None:
         self._store: dict[str, tuple[str, float | None]] = {}
+        self._last_prune = time.time()
+        self._prune_interval = 60.0
         logger.info("MemoryCache initialized")
 
+    def _prune_expired(self) -> None:
+        now = time.time()
+        if now - self._last_prune < self._prune_interval:
+            return
+        self._last_prune = now
+        expired = [
+            key
+            for key, (_, expires_at) in self._store.items()
+            if expires_at is not None and now > expires_at
+        ]
+        for key in expired:
+            del self._store[key]
+        if expired:
+            logger.debug("Pruned %d expired cache entries", len(expired))
+
     async def get(self, key: str) -> str | None:
+        self._prune_expired()
         entry = self._store.get(key)
         if entry is None:
             return None
@@ -26,6 +44,7 @@ class MemoryCache(Cache):
         return value
 
     async def set(self, key: str, value: str, ttl: int | None = None) -> None:
+        self._prune_expired()
         expires_at = time.time() + ttl if ttl else None
         self._store[key] = (value, expires_at)
 

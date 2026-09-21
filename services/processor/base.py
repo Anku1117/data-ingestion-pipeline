@@ -38,33 +38,27 @@ class ProcessingResult:
 
 class Validator(ABC):
     @abstractmethod
-    def validate(self, event: EventEnvelope) -> ValidationResult:
-        ...
+    def validate(self, event: EventEnvelope) -> ValidationResult: ...
 
 
 class Transformer(ABC):
     @abstractmethod
-    def transform(self, event: EventEnvelope) -> EventEnvelope:
-        ...
+    def transform(self, event: EventEnvelope) -> EventEnvelope: ...
 
 
 class Enricher(ABC):
     @abstractmethod
-    def enrich(self, event: EventEnvelope) -> EventEnvelope:
-        ...
+    def enrich(self, event: EventEnvelope) -> EventEnvelope: ...
 
 
 class Deduplicator(ABC):
     @abstractmethod
-    async def is_duplicate(self, event: EventEnvelope) -> bool:
-        ...
+    async def is_duplicate(self, event: EventEnvelope) -> bool: ...
 
     @abstractmethod
-    async def record(self, event: EventEnvelope) -> None:
-        ...
+    async def record(self, event: EventEnvelope) -> None: ...
 
 
 class Router(ABC):
     @abstractmethod
-    def route(self, event: EventEnvelope) -> str:
-        ...
+    def route(self, event: EventEnvelope) -> str: ...

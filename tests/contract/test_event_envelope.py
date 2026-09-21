@@ -44,7 +44,9 @@ class TestEventEnvelopeContract:
 
     def test_payload_contract(self) -> None:
         event = EventEnvelope(
-            event_type="T", source="s", producer="p",
+            event_type="T",
+            source="s",
+            producer="p",
             payload={"key": "value", "nested": {"a": 1}},
         )
         assert event.payload["key"] == "value"
@@ -52,15 +54,22 @@ class TestEventEnvelopeContract:
 
     def test_metadata_contract(self) -> None:
         event = EventEnvelope(
-            event_type="T", source="s", producer="p",
+            event_type="T",
+            source="s",
+            producer="p",
             metadata={"version": "2.0"},
         )
         assert event.metadata["version"] == "2.0"
 
     def test_agent_fields_contract(self) -> None:
         event = EventEnvelope(
-            event_type="AGENT_STEP", source="agent_runtime", producer="agent_v1",
-            agent_id="agent_1", run_id="run_123", session_id="sess_1", task_id="task_1",
+            event_type="AGENT_STEP",
+            source="agent_runtime",
+            producer="agent_v1",
+            agent_id="agent_1",
+            run_id="run_123",
+            session_id="sess_1",
+            task_id="task_1",
         )
         assert event.agent_id == "agent_1"
         assert event.run_id == "run_123"
@@ -69,9 +78,13 @@ class TestEventEnvelopeContract:
 
     def test_serialization_roundtrip(self) -> None:
         event = EventEnvelope(
-            event_type="TEST", source="s", producer="p",
-            payload={"x": 1}, metadata={"y": 2},
-            agent_id="a1", run_id="r1",
+            event_type="TEST",
+            source="s",
+            producer="p",
+            payload={"x": 1},
+            metadata={"y": 2},
+            agent_id="a1",
+            run_id="r1",
         )
         data = event.model_dump(mode="json")
         restored = EventEnvelope.model_validate(data)

@@ -98,3 +98,31 @@ class TestEventEndpoints:
             },
         )
         assert response.status_code == 422
+
+    async def test_error_response_no_internal_details(self, client: AsyncClient) -> None:
+        response = await client.post(
+            "/events",
+            json={
+                "event_type": "TEST",
+                "source": "x" * 300,
+                "producer": "test",
+            },
+        )
+        if response.status_code >= 400:
+            detail = str(response.json())
+            assert "password" not in detail.lower()
+            assert "secret" not in detail.lower()
+            assert "connection" not in detail.lower()
+
+    async def test_events_list_returns_valid_structure(self, client: AsyncClient) -> None:
+        response = await client.get("/events")
+        assert response.status_code == 200
+        data = response.json()
+        assert "total" in data
+        assert "events" in data
+        assert "limit" in data
+        assert "offset" in data
+
+    async def test_get_event_not_found(self, client: AsyncClient) -> None:
+        response = await client.get("/events/nonexistent_event_id")
+        assert response.status_code == 404

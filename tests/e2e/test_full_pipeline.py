@@ -21,7 +21,9 @@ async def async_engine():
 @pytest.fixture
 async def client(async_engine):
     factory = async_sessionmaker(
-        bind=async_engine, class_=AsyncSession, expire_on_commit=False,
+        bind=async_engine,
+        class_=AsyncSession,
+        expire_on_commit=False,
     )
 
     async def override_get_session():

@@ -19,6 +19,8 @@ logger = get_logger(__name__)
 class DetectionEngine:
     """Rule-based threat detection engine."""
 
+    MAX_ALERTS = 10000
+
     def __init__(self) -> None:
         self._rules: list[DetectionRule] = [
             BruteForceRule(threshold=5, window_seconds=300),
@@ -43,6 +45,8 @@ class DetectionEngine:
                 if result.detected:
                     metrics.increment("detector.threats_detected")
                     self._alerts.extend(result.alerts)
+                    if len(self._alerts) > self.MAX_ALERTS:
+                        self._alerts = self._alerts[-self.MAX_ALERTS :]
                     for alert in result.alerts:
                         logger.warning(
                             "Threat detected alert_id=%s type=%s severity=%s confidence=%.2f",

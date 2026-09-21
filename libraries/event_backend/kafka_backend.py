@@ -68,9 +68,7 @@ class KafkaEventBackend(EventBackend):
             await self._producer.send(topic, value=event_data)
         return len(events)
 
-    async def subscribe(
-        self, topics: list[str], group_id: str
-    ) -> AsyncIterator[dict[str, Any]]:
+    async def subscribe(self, topics: list[str], group_id: str) -> AsyncIterator[dict[str, Any]]:
         try:
             from aiokafka import AIOKafkaConsumer
 
@@ -102,9 +100,7 @@ class KafkaEventBackend(EventBackend):
         if not self._producer:
             return False
         try:
-            await self._producer.send_and_wait(
-                "__health_check", value=b"ping"
-            )
+            await self._producer.send_and_wait("__health_check", value=b"ping")
             return True
         except Exception:
             return False

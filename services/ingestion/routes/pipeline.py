@@ -4,10 +4,11 @@ from fastapi import APIRouter
 
 from libraries.configuration.settings import get_settings
 from libraries.event_backend import get_event_backend
+from libraries.logging.logging import get_logger
 from libraries.observability.metrics import get_metrics
 from libraries.search import get_search
 
-logger_text = __import__("logging").getLogger(__name__)
+logger = get_logger(__name__)
 router = APIRouter(prefix="/pipeline", tags=["pipeline"])
 
 

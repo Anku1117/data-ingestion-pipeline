@@ -51,9 +51,7 @@ class MemoryEventBackend(EventBackend):
             await self.publish(topic, event)
         return len(events)
 
-    async def subscribe(
-        self, topics: list[str], group_id: str
-    ) -> AsyncIterator[dict[str, Any]]:
+    async def subscribe(self, topics: list[str], group_id: str) -> AsyncIterator[dict[str, Any]]:
         queues: list[asyncio.Queue[dict[str, Any] | None]] = []
         for topic in topics:
             if topic not in self._subscribers:

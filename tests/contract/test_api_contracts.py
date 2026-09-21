@@ -35,8 +35,11 @@ class TestEventCreateRequestContract:
 
     def test_optional_fields(self) -> None:
         req = EventCreateRequest(
-            event_type="T", source="s", producer="p",
-            tenant_id="t1", trace_id="tr1",
+            event_type="T",
+            source="s",
+            producer="p",
+            tenant_id="t1",
+            trace_id="tr1",
         )
         assert req.tenant_id == "t1"
         assert req.trace_id == "tr1"
@@ -45,8 +48,11 @@ class TestEventCreateRequestContract:
 class TestEventCreateResponseContract:
     def test_response(self) -> None:
         from datetime import UTC, datetime
+
         resp = EventCreateResponse(
-            event_id="evt_123", status="accepted", timestamp=datetime.now(UTC),
+            event_id="evt_123",
+            status="accepted",
+            timestamp=datetime.now(UTC),
         )
         assert resp.event_id == "evt_123"
         assert resp.status == "accepted"
@@ -97,6 +103,7 @@ class TestAgentStepContract:
 class TestProcessingResultContract:
     def test_valid_result(self) -> None:
         from libraries.schemas.common import EventEnvelope
+
         event = EventEnvelope(event_type="T", source="s", producer="p")
         result = ProcessingResult(status=ValidationResult.VALID, event=event)
         assert result.is_valid is True
@@ -104,6 +111,7 @@ class TestProcessingResultContract:
 
     def test_dlq_result(self) -> None:
         from libraries.schemas.common import EventEnvelope
+
         event = EventEnvelope(event_type="T", source="s", producer="p")
         result = ProcessingResult(status=ValidationResult.PERMANENT_FAILURE, event=event)
         assert result.should_dlq is True

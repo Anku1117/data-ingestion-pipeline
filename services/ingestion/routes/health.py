@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from fastapi import APIRouter
+from fastapi import APIRouter, status
 from sqlalchemy import text
 
 from libraries.configuration.settings import get_settings
@@ -31,4 +31,9 @@ async def readiness_check() -> dict[str, str]:
         return {"status": "ready", "database": "connected"}
     except Exception as e:
         logger.error("Readiness check failed: %s", str(e))
-        return {"status": "not_ready", "database": "unavailable"}
+        from fastapi.responses import JSONResponse
+
+        return JSONResponse(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            content={"status": "not_ready", "database": "unavailable"},
+        )

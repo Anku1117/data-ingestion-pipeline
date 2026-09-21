@@ -11,17 +11,14 @@ class DetectionRule(ABC):
 
     @property
     @abstractmethod
-    def name(self) -> str:
-        ...
+    def name(self) -> str: ...
 
     @property
     @abstractmethod
-    def description(self) -> str:
-        ...
+    def description(self) -> str: ...
 
     @abstractmethod
-    def evaluate(self, events: list[dict[str, Any]]) -> DetectionResult:
-        ...
+    def evaluate(self, events: list[dict[str, Any]]) -> DetectionResult: ...
 
 
 class BruteForceRule(DetectionRule):
@@ -177,14 +174,11 @@ class AuthenticationAnomalyRule(DetectionRule):
 
     def evaluate(self, events: list[dict[str, Any]]) -> DetectionResult:
         auth_events = [
-            e for e in events
-            if e.get("event_type") in ("LOGIN_SUCCESS", "LOGIN_FAILED")
+            e for e in events if e.get("event_type") in ("LOGIN_SUCCESS", "LOGIN_FAILED")
         ]
 
         if len(auth_events) < 5:
-            return DetectionResult(
-                detected=False, alerts=[], features={}, rule_name=self.name
-            )
+            return DetectionResult(detected=False, alerts=[], features={}, rule_name=self.name)
 
         failures = sum(1 for e in auth_events if e["event_type"] == "LOGIN_FAILED")
         ratio = failures / len(auth_events)

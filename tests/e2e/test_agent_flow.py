@@ -29,20 +29,34 @@ class TestE2EAgentFlow:
         await agent_service.start_run(run)
 
         step1 = AgentStep(
-            run_id=run.run_id, step_number=1, step_type=StepType.MODEL_CALL,
-            model_id="gpt-4", input_tokens=100, output_tokens=50, latency_ms=500,
+            run_id=run.run_id,
+            step_number=1,
+            step_type=StepType.MODEL_CALL,
+            model_id="gpt-4",
+            input_tokens=100,
+            output_tokens=50,
+            latency_ms=500,
         )
         await agent_service.record_step(step1)
 
         step2 = AgentStep(
-            run_id=run.run_id, step_number=2, step_type=StepType.TOOL_CALL,
-            tool_name="search", tool_status="success", latency_ms=200,
+            run_id=run.run_id,
+            step_number=2,
+            step_type=StepType.TOOL_CALL,
+            tool_name="search",
+            tool_status="success",
+            latency_ms=200,
         )
         await agent_service.record_step(step2)
 
         step3 = AgentStep(
-            run_id=run.run_id, step_number=3, step_type=StepType.MODEL_CALL,
-            model_id="gpt-4", input_tokens=80, output_tokens=30, latency_ms=400,
+            run_id=run.run_id,
+            step_number=3,
+            step_type=StepType.MODEL_CALL,
+            model_id="gpt-4",
+            input_tokens=80,
+            output_tokens=30,
+            latency_ms=400,
         )
         await agent_service.record_step(step3)
 
@@ -63,9 +77,13 @@ class TestE2EAgentFlow:
         await agent_service.complete_run(run.run_id, outcome="success")
 
         from services.agent_data.models import AgentEvaluation
+
         evaluation = AgentEvaluation(
-            run_id=run.run_id, agent_id="agent_2",
-            success=True, score=0.85, total_tokens=200,
+            run_id=run.run_id,
+            agent_id="agent_2",
+            success=True,
+            score=0.85,
+            total_tokens=200,
         )
         await agent_service.create_evaluation(evaluation)
 
@@ -81,16 +99,23 @@ class TestE2EAgentFlow:
         await agent_service.start_run(run)
 
         step = AgentStep(
-            run_id=run.run_id, step_number=1, step_type=StepType.MODEL_CALL,
-            model_id="gpt-4", input_tokens=50, output_tokens=25,
+            run_id=run.run_id,
+            step_number=1,
+            step_type=StepType.MODEL_CALL,
+            model_id="gpt-4",
+            input_tokens=50,
+            output_tokens=25,
         )
         await agent_service.record_step(step)
         await agent_service.complete_run(run.run_id, outcome="done")
 
         from services.agent_data.models import AgentEvaluation
+
         evaluation = AgentEvaluation(
-            run_id=run.run_id, agent_id="agent_3",
-            success=True, score=0.90,
+            run_id=run.run_id,
+            agent_id="agent_3",
+            success=True,
+            score=0.90,
         )
         await agent_service.create_evaluation(evaluation)
 
@@ -122,8 +147,12 @@ class TestE2EThreatDetection:
 
     async def test_port_scan_detection(self, detection_engine: DetectionEngine) -> None:
         events = [
-            {"event_id": f"evt_{i}", "event_type": "NETWORK_CONNECTION", "source": "network",
-             "payload": {"source_ip": "192.168.1.1", "dest_port": str(1000 + i)}}
+            {
+                "event_id": f"evt_{i}",
+                "event_type": "NETWORK_CONNECTION",
+                "source": "network",
+                "payload": {"source_ip": "192.168.1.1", "dest_port": str(1000 + i)},
+            }
             for i in range(15)
         ]
         results = detection_engine.evaluate(events)

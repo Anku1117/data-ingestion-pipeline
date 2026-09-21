@@ -103,7 +103,7 @@ async def create_event(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=ErrorResponse(
                 error="event_creation_failed",
-                detail=str(e),
+                detail="Internal server error",
                 request_id=request_id,
             ).model_dump(),
         ) from e

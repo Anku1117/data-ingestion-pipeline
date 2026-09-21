@@ -2,9 +2,10 @@ from __future__ import annotations
 
 from fastapi import APIRouter, HTTPException, Query, status
 
+from libraries.logging.logging import get_logger
 from services.detector.engine import DetectionEngine
 
-logger_text = __import__("logging").getLogger(__name__)
+logger = get_logger(__name__)
 router = APIRouter(prefix="/threats", tags=["threats"])
 
 _engine: DetectionEngine | None = None

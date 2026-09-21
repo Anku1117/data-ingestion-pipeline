@@ -34,9 +34,7 @@ class EventBackend(ABC):
         ...
 
     @abstractmethod
-    async def subscribe(
-        self, topics: list[str], group_id: str
-    ) -> AsyncIterator[dict[str, Any]]:
+    async def subscribe(self, topics: list[str], group_id: str) -> AsyncIterator[dict[str, Any]]:
         """Subscribe to topics and yield events."""
         ...
 
