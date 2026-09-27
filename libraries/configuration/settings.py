@@ -35,10 +35,25 @@ class Settings(BaseSettings):
     prometheus_port: int = 9090
     metrics_enabled: bool = True
 
+    event_backend: str = "memory"
+    search_backend: str = "memory"
+    cache_backend: str = "memory"
+
+    api_keys: str = ""
+    cors_origins: str = "*"
+    retention_days: int = 90
+
     @property
     def postgres_dsn(self) -> str:
         return (
             f"postgresql://{self.postgres_user}:{self.postgres_password}"
+            f"@{self.postgres_host}:{self.postgres_port}/{self.postgres_db}"
+        )
+
+    @property
+    def postgres_async_dsn(self) -> str:
+        return (
+            f"postgresql+asyncpg://{self.postgres_user}:{self.postgres_password}"
             f"@{self.postgres_host}:{self.postgres_port}/{self.postgres_db}"
         )
 
